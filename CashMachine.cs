@@ -5,7 +5,7 @@ namespace CashMachineLogic
     public class CashMachine
     {
         private string _pathToCashStorage;
-        private Dictionary<int, int> cashStorage = new Dictionary<int, int>();
+        private Dictionary<int, int> _cashStorage = new Dictionary<int, int>();
         public CashMachine(string pathToCashStorage)
         {
             _pathToCashStorage = pathToCashStorage;
@@ -17,8 +17,8 @@ namespace CashMachineLogic
             {
                 try
                 {
-                    cashStorage = JsonSerializer.Deserialize<Dictionary<int, int>>(File.ReadAllText(_pathToCashStorage));
-                    cashStorage = cashStorage.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
+                    _cashStorage = JsonSerializer.Deserialize<Dictionary<int, int>>(File.ReadAllText(_pathToCashStorage));
+                    _cashStorage = _cashStorage.OrderByDescending(x => x.Key).ToDictionary(x => x.Key, y => y.Value);
                 }
                 catch (Exception ex)
                 {
@@ -26,24 +26,55 @@ namespace CashMachineLogic
                 }
             }
         }
-
-        public Dictionary<int, int> GetCash(int sum)
+        public Dictionary<int, int>? WithdrawalCash(int amountToBeIssued)
         {
-            var result = new Dictionary<int, int>();
-            foreach (var interval in cashStorage)
+            return WithdrawalCash(amountToBeIssued, _cashStorage);
+        }
+
+        private Dictionary<int, int>? WithdrawalCash(int amountToBeIssued, Dictionary<int, int> cashStorage)
+        {
+            if (cashStorage == null || cashStorage.Count == 0)
+                return null;
+            var billsForWithdrawal = new Dictionary<int, int>();
+
+            foreach (var bill in cashStorage)
             {
-                int count = sum / interval.Key;
+                if (bill.Value == 0)
+                    continue;
+                float maxBillCount = (float)amountToBeIssued / bill.Key;
 
-                if (count != 0 && interval.Value != 0)
+                if (maxBillCount >= 1)
                 {
-                    var amount = count > interval.Value ? interval.Value : count;
-                    sum = sum - amount * interval.Key;
-                    result.Add(interval.Key, amount);
+                    var amount = maxBillCount > bill.Value ? bill.Value : (int)Math.Floor(maxBillCount);
+                    billsForWithdrawal.Add(bill.Key, amount);
                 }
-
             }
 
-            return result;
+            foreach (var billForWithdrawal in billsForWithdrawal)
+            {
+                var amountToBeIssuedCur = amountToBeIssued - billForWithdrawal.Value * billForWithdrawal.Key;
+
+                if (amountToBeIssuedCur == 0)
+                {
+                    return new Dictionary<int, int>(){
+                        {billForWithdrawal.Key, billForWithdrawal.Value}
+                    };
+                }
+
+                var cash = WithdrawalCash(amountToBeIssuedCur, cashStorage.Where(x => x.Key != billForWithdrawal.Key)
+                    .ToDictionary(x => x.Key, y => y.Value));
+
+                if (cash != null && amountToBeIssuedCur == cash.Sum(x => x.Key * x.Value))
+                {
+                    var correctBillsStack = new Dictionary<int, int>();
+                    correctBillsStack.Add(billForWithdrawal.Key, billForWithdrawal.Value);
+                    foreach (var correctBills2 in cash)
+                        correctBillsStack.Add(correctBills2.Key, correctBills2.Value);
+                    return correctBillsStack;
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -16,9 +16,9 @@ while (true)
         break;
     if (Int32.TryParse(amountToBeIssuedStr, out var amountToBeIssued))
     {
-        var cash = cashMachine.GetCash(amountToBeIssued);
+        var cash = cashMachine.WithdrawalCash(amountToBeIssued);
 
-        if (cash.Sum(x => x.Value * x.Key) == amountToBeIssued)
+        if (cash != null)
         {
             foreach (var bill in cash)
             {
