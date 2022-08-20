@@ -66,10 +66,11 @@ namespace CashMachineLogic
 
                 if (cash != null && amountToBeIssuedCur == cash.Sum(x => x.Key * x.Value))
                 {
-                    var correctBillsStack = new Dictionary<int, int>();
-                    correctBillsStack.Add(billForWithdrawal.Key, billForWithdrawal.Value);
-                    foreach (var correctBills2 in cash)
-                        correctBillsStack.Add(correctBills2.Key, correctBills2.Value);
+                    var correctBillsStack = new Dictionary<int, int>(){
+                        {billForWithdrawal.Key, billForWithdrawal.Value}
+                    };
+                    foreach (var correctBills in cash)
+                        correctBillsStack.Add(correctBills.Key, correctBills.Value);
                     return correctBillsStack;
                 }
             }
